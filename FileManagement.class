@@ -1,0 +1,81 @@
+<?php
+
+
+class FileManagement {
+
+			public function getUpload(){
+
+				$ext = pathinfo($_FILES['upfile']['name'], PATHINFO_EXTENSION);
+				$data = Array ("Title" => $_FILES['upfile']['name'],
+				               "Size" => $_FILES['upfile']['size'],
+				               "Extension" => $ext,
+				               "UploadDate" => date("Ymd")
+				);
+			
+				$target_file = "uploads/".basename($_FILES["upfile"]["name"]);			
+				if (move_uploaded_file($_FILES["upfile"]["tmp_name"], $target_file)) {
+							// get db connection, insert into db and upload file to ftp.
+							$db = new MysqliDb ('fdb4.biz.nf', '1824178_tests', 'phptest1', '1824178_tests');
+							$db->insert('FileInformation', $data);
+							echo "The file ". basename( $_FILES["upfile"]["name"]). " has been uploaded.";
+   				 	} else {
+        					echo "Sorry, there was an error uploading your file.";
+				}
+
+			}
+
+			
+			public function getForms(){
+					// upload form
+				echo'<table><form enctype="multipart/form-data" action="'.$_SERVER["PHP_SELF"].'" method="POST">'
+				.'<tr><td><input type="hidden" name="action" value="upform" /> Choose a file to upload: '
+				.'<input name="upfile" type="file" /></td><td><input type="submit" value="Upload File" /></form></td></tr>';
+
+				
+				if ($handle = opendir('uploads/')) {
+
+			    //download form
+			    while (false !== ($entry = readdir($handle))) {
+			        if ($entry != "." && $entry != "..") {
+			            $arr_length = count($entry);
+			          
+						for($i=0;$i<$arr_length;$i++)
+							{
+					
+					   echo '<form enctype="multipart/form-data" action="'.$_SERVER["PHP_SELF"].'" method="POST">'
+							    .'<tr><td>'.$entry.'</td><td><input type="hidden" name="action" value="downform" />'
+							    .'<input type="checkbox" name="checkbox[]" value="'.$entry.'"></td></tr><br>';
+
+			            }
+			        }
+			       
+			    }
+			    echo '<tr><td>select multiple files to download as zip</td><td> <input type="submit" name="submit_download" value="download Files" /></form></td></tr></table>';
+		    	closedir($handle);
+				}
+			}
+
+			public function getZip($files){
+
+				$zip = new ZipArchive();
+				$zipname = time().".zip"; // Zip name
+				$zip->open($zipname,  ZipArchive::CREATE);
+					foreach ($files as $file) {
+						$path = "uploads/".$file;
+							if(file_exists($path)){
+							  	$zip->addFile($path);  
+							}else{
+								echo"file does not exist";
+							}
+						}
+					$zip->close();
+
+				header('Content-Type: application/zip');
+				header('Content-disposition: attachment; filename='.$zipname);
+				header('Content-Length: ' . filesize($zipname));
+				readfile($zipname);
+			   
+			}
+	}
+
+?>
